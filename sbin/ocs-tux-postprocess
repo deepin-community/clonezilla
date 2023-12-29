@@ -1,0 +1,180 @@
+#!/bin/bash
+# License: GPL 
+# Author: Steven Shiau <steven _at_ clonezilla org>, Thomas Tsai <thomas _at_ nchc org tw>.
+# Description: Program to clean some hardware record, e.g. NIC MAC address.
+
+#
+DRBL_SCRIPT_PATH="${DRBL_SCRIPT_PATH:-/usr/share/drbl}"
+. $DRBL_SCRIPT_PATH/sbin/drbl-conf-functions
+. /etc/drbl/drbl-ocs.conf
+. $DRBL_SCRIPT_PATH/sbin/ocs-functions
+
+#
+USAGE() {
+    echo "$ocs - To remove the Linux udev persistent files"
+    echo "Usage:"
+    echo "To run $ocs:"
+    echo "$ocs [OPTION] [PARTITION]"
+    echo "PARTITION name can be with or without /dev/, e.g., /dev/sda1 or sda1."
+    echo "If it is not assigned, all the partitions on the system will be searched."
+    echo
+    echo "OPTION:"
+    echo "-c, --cd-only    Remove Linux udev persistent CD file only."
+    echo "-n, --net-only   Remove Linux udev persistent net file only."
+    echo "By default both CD and net persistent files will be removed."
+    echo
+    echo "Ex:"
+    echo "To remove both CD and net persistent files in disk sda1, run"
+    echo "   $ocs sda1"
+    echo
+} # end of USAGE
+
+# check available partitions
+rm_udev_persistent_record() {
+  local selected_dev="$*"  # selected_dev is like "sda1 sda2"
+  local fs target_p
+  local gen_ma_id_flag=""
+
+  if [ -z "$selected_dev" ]; then
+    # Here we also search LVM, since udev persistent record could be inside that.
+    get_partition_list true
+    # partition_list is got from get_partition_list
+    selected_dev="$partition_list"
+  fi
+
+  echo "Trying to remove udev persistent files. The devices to be searched: $selected_dev... "
+  for ipartition in $selected_dev; do
+    # Rest the flag in the for loop.
+    gen_ma_id_flag="no"
+    target_p="/dev/$ipartition"
+    fs="$(LC_ALL=C ocs-get-dev-info $target_p filesystem)"
+    case "$fs" in
+      # Skip swap, FAT, NTFS, HFS+ partition...
+      fat*|vfat*|FAT*|VFAT*|ntfs|hfs|hfs+|hfsplus|ufs|vmfs|swap|"")
+        [ -z "$fs" ] && fs="No file system. Extended partition?"
+	echo "Skip $target_p ($fs)."
+	;;
+      *)
+        echo "Now searching possible device $target_p..."
+        hd_img="$(mktemp -d /tmp/hd_img.XXXXXX)"
+        mount $target_p $hd_img >/dev/null 2>&1
+        mrc=$?
+	if [ "$mrc" -gt 0 ]; then
+          [ -d "$hd_img" -a -n "$hd_img" ] && rmdir $hd_img
+	  continue
+        fi
+	# NIC
+	for inet in `get-nic-devs`; do
+          # If MAC address is not found in 70-persistent-net.rules, it means the image is not restored to the same machine, therefore remove it. Even just one does not match.
+          imac="$(LC_ALL=C drbl-get-macadd $inet)"
+          if [ -e "$hd_img/etc/udev/rules.d/70-persistent-net.rules" -a \
+          	"$remove_udev_nic" = "true" ]; then
+             if ! grep -q -Ei "^SUBSYSTEM.*${imac}" $hd_img/etc/udev/rules.d/70-persistent-net.rules 2>/dev/null; then
+               echo "MAC address $imac of $inet was not found in $hd_img/etc/udev/rules.d/70-persistent-net.rules. This persistent net file does not fit the hardware. Remove it."
+               LC_ALL=C rm -fv $hd_img/etc/udev/rules.d/70-persistent-net.rules
+	       break
+             fi
+          fi
+        done
+	for inet in `get-nic-devs`; do
+          # If MAC address is not found in /etc/sysconfig/network-scripts/ifcfg-eth*, it means the image is not restored to the same machine, therefore remove it. Even just one does not match.
+          imac="$(LC_ALL=C drbl-get-macadd $inet)"
+	  if ! grep -q -Ei "^HWADDR=$imac" $hd_img/etc/sysconfig/network-scripts/ifcfg-eth* 2>/dev/null; then
+            if ls $hd_img/etc/sysconfig/network-scripts/ifcfg-eth* &>/dev/null; then
+              echo "MAC address $imac of $inet was not found in $hd_img/etc/sysconfig/network-scripts/ifcfg-eth*. This MAC data does not fit the hardware. Comment it."
+              LC_ALL=C perl -pi -e 's/(^HWADDR=.*)/#$1 # Commented by Clonezilla/g' $hd_img/etc/sysconfig/network-scripts/ifcfg-eth*
+	      break
+            fi
+          fi
+        done
+	# CD
+        if [ -e "$hd_img/etc/udev/rules.d/70-persistent-cd.rules" -a \
+		"$remove_udev_cd" = "true" ]; then
+          rm -fv $hd_img/etc/udev/rules.d/70-persistent-cd.rules
+        fi
+	# Dbus machine id 
+	# Ref: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=639261
+	#      http://unix.stackexchange.com/questions/120612/why-cant-i-run-gnome-apps-over-remote-ssh-session
+	# Thanks to Peter Sun for reporting this.
+	# gen_ma_id_flag is where we will know if it's the right partition to deal with.
+        if [ -e "$hd_img/var/lib/dbus/machine-id" -a \
+		"$remove_dbus_machine_id" = "true" ]; then
+          rm -fv $hd_img/var/lib/dbus/machine-id
+	  gen_ma_id_flag="yes"
+        fi
+        if [ -e "$hd_img/etc/machine-id" -a \
+		"$remove_dbus_machine_id" = "true" ]; then
+          rm -fv $hd_img/etc/machine-id
+	  gen_ma_id_flag="yes"
+        fi
+	if [ "$gen_ma_id_flag" = "yes" ]; then
+          echo "Found the file system and mount point to re-generate machine id: $target_p, $hd_img"
+          systemd-machine-id-setup --root=$hd_img
+          if [ -e "$hd_img/etc/machine-id" ]; then
+            chmod 444 $hd_img/etc/machine-id
+	    # TODO: maybe a better file to replace /etc/issue?
+            chcon --reference=$hd_img/etc/issue $hd_img/etc/machine-id
+            chcon -u system_u -t machineid_t $hd_img/etc/machine-id
+            (cd $hd_img/var/lib/dbus/; ln -fs /etc/machine-id .)
+          else
+            [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+            echo "Failed to create /etc/machine-id in the deployed GNU/Linux $hd_img/."
+            [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+          fi
+        fi
+        [ "$mrc" -eq 0 ] && unmount_wait_and_try $target_p
+        [ -d "$hd_img" -a -n "$hd_img" ] && rmdir $hd_img
+	;;
+    esac
+  done
+  echo "done!"
+} # end of rm_udev_persistent_record
+#
+
+####################
+### Main program ###
+####################
+
+ocs_file="$0"
+ocs=`basename $ocs_file`
+
+# Default settings
+remove_udev_cd="true"
+remove_udev_nic="true"
+remove_dbus_machine_id="true"
+#
+while [ $# -gt 0 ]; do
+ case "$1" in
+   -c|--cd-only) remove_udev_cd="true"
+                 remove_udev_nic="false"
+                 remove_dbus_machine_id="false"
+	         shift;;
+   -n|--nic-only) 
+	         remove_udev_cd="false"
+                 remove_udev_nic="true"
+                 remove_dbus_machine_id="false"
+	         shift;;
+   -m|--machine-id-only) 
+	         remove_udev_cd="false"
+                 remove_udev_nic="false"
+                 remove_dbus_machine_id="true"
+	         shift;;
+   -*)     echo "${0}: ${1}: invalid option" >&2
+           USAGE >& 2
+           exit 2 ;;
+   *)      break ;;
+ esac
+done
+
+ocs_hw_record_dev="$(strip_leading_dev $*)"
+
+#
+check_if_root
+ask_and_load_lang_set
+
+#
+echo "Trying to remove udev hardware record in the restored OS..."
+if [ -n "$ocs_hw_record_dev" ]; then
+  echo "The specified destination device: $ocs_hw_record_dev"
+fi
+rm_udev_persistent_record $ocs_hw_record_dev

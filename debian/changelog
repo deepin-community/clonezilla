@@ -1,5 +1,332 @@
-template-repository (1.0-1) unstable; urgency=medium
+clonezilla (5.5.20-1) unstable; urgency=medium
 
-  * Initial release
+  * New upstream version 5.5.20
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 25 Dec 2023 19:30:47 +0100
+
+clonezilla (5.5.19-1) unstable; urgency=medium
+
+  * New upstream version 5.5.19
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 17 Dec 2023 16:53:36 +0100
+
+clonezilla (5.5.18-1) unstable; urgency=medium
+
+  * New upstream version 5.5.18
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 11 Dec 2023 15:04:16 +0100
+
+clonezilla (5.5.16-1) unstable; urgency=medium
+
+  * New upstream version 5.5.16
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 12 Nov 2023 20:45:07 +0100
+
+clonezilla (5.5.15-1) unstable; urgency=medium
+
+  * New upstream version 5.5.15
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 02 Nov 2023 12:24:32 +0100
+
+clonezilla (5.5.12-1) unstable; urgency=medium
+
+  * New upstream version 5.5.12
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 15 Oct 2023 19:28:31 +0200
+
+clonezilla (5.5.11-1) unstable; urgency=medium
+
+  * New upstream version 5.5.11
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 30 Sep 2023 14:02:15 +0200
+
+clonezilla (5.5.9-1) unstable; urgency=medium
+
+  * New upstream version 5.5.9
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 24 Aug 2023 10:55:29 +0200
+
+clonezilla (5.5.8-1) unstable; urgency=medium
+
+  * New upstream version 5.5.8
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 13 Aug 2023 11:41:01 +0200
+
+clonezilla (5.5.5-1) unstable; urgency=medium
+
+  * New upstream version 5.5.5
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 05 Aug 2023 23:06:42 +0200
+
+clonezilla (5.5.1-1) unstable; urgency=medium
+
+  * New upstream version 5.5.1
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 25 Jul 2023 10:31:52 +0200
+
+clonezilla (5.4.12-1) unstable; urgency=medium
+
+  * New upstream version 5.4.12
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 14 Jul 2023 19:01:44 +0200
+
+clonezilla (5.4.10-1) unstable; urgency=medium
+
+  * New upstream version 5.4.10
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 01 Jul 2023 17:18:15 +0200
+
+clonezilla (5.4.9-1) unstable; urgency=medium
+
+  * New upstream version 5.4.9
+  * added a dependency on pixz; Closes: #851448
+  * removed version number constraints from dependencies
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 11 Jun 2023 11:06:57 +0200
+
+clonezilla (5.4.8-1) experimental; urgency=medium
+
+  * New upstream version 5.4.8
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 29 May 2023 14:14:10 +0200
+
+clonezilla (5.4.6-1) experimental; urgency=medium
+
+  * New upstream version 5.4.6
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 01 May 2023 12:34:47 +0200
+
+clonezilla (5.4.0-1) unstable; urgency=medium
+
+  * New upstream version 5.4.0
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 04 Mar 2023 09:50:20 +0100
+
+clonezilla (5.3.17-2) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
+  * debian/copyright: use spaces rather than tabs to start continuation lines.
+  * Use secure URI in Homepage field.
+  * Change priority extra to priority optional.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 21 Feb 2023 18:01:09 +0100
+
+clonezilla (5.3.17-1) unstable; urgency=medium
+
+  * New upstream version 5.3.17
+  * bumped Standards-Version: 4.6.2
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 11 Feb 2023 18:45:13 +0100
+
+clonezilla (5.3.14-1) unstable; urgency=medium
+
+  * New upstream version 5.3.14
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 24 Jan 2023 19:35:19 +0100
+
+clonezilla (5.3.6-1) unstable; urgency=medium
+
+  * New upstream version 5.3.6
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 12 Jan 2023 17:48:37 +0100
+
+clonezilla (5.3.1-1) unstable; urgency=medium
+
+  * New upstream version 5.3.1
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 08 Dec 2022 16:32:46 +0100
+
+clonezilla (5.2.7-1) unstable; urgency=medium
+
+  * New upstream version 5.2.7
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 01 Nov 2022 11:45:36 +0100
+
+clonezilla (5.2.2-1) unstable; urgency=medium
+
+  * New upstream version 5.2.2
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 25 Jul 2022 12:14:30 +0200
+
+clonezilla (5.2.1-1) unstable; urgency=medium
+
+  * New upstream version 5.2.1
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 08 Jul 2022 17:27:07 +0200
+
+clonezilla (5.1.12-1) unstable; urgency=medium
+
+  * New upstream version 5.1.12
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 24 Jun 2022 17:11:33 +0200
+
+clonezilla (5.1.10-1) unstable; urgency=medium
+
+  * New upstream version 5.1.10
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 08 Jun 2022 18:38:55 +0200
+
+clonezilla (5.1.7-1) unstable; urgency=medium
+
+  * New upstream version 5.1.7
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 31 May 2022 19:52:09 +0200
+
+clonezilla (5.1.1-1) unstable; urgency=medium
+
+  * New upstream version 5.1.1
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 06 May 2022 18:19:24 +0200
+
+clonezilla (5.0.12-1) unstable; urgency=medium
+
+  * New upstream version 5.0.12
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 20 Apr 2022 11:07:29 +0200
+
+clonezilla (5.0.7-1) unstable; urgency=medium
+
+  * new upstream version 5.0.7
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 11 Apr 2022 18:31:16 +0200
+
+clonezilla (5.0.4-1) unstable; urgency=medium
+
+  * New upstream version 5.0.4
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 26 Mar 2022 19:09:42 +0100
+
+clonezilla (5.0.3-1) unstable; urgency=medium
+
+  * modified debian/watch to point
+    to https://gitlab.com/stevenshiau/clonezilla.git
+  * new upstream version. Closes: 1006190
+  * bumped standards, Standards-Version: 4.6.0, debhelper-compat (= 13)
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 21 Feb 2022 17:24:58 +0100
+
+clonezilla (3.35.2-3) unstable; urgency=medium
+
+  * removed postinst and postrm instructions which installed (or erased)
+    files and directories under /opt/; this seems to be useless for current
+    version of clonezilla, and it prevents it from being installed in
+    Bullseye. Closes: #987527
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 25 Apr 2021 16:52:50 +0200
+
+clonezilla (3.35.2-2) unstable; urgency=medium
+
+  * modified the versioned dependency clonezilla -> drbl, which becomes
+    ">> 2.30.5-1~" Closes: #928442
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 11 Mar 2020 17:57:09 +0100
+
+clonezilla (3.35.2-1) unstable; urgency=medium
+
+  * new upstream version
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 17 Nov 2019 12:52:04 +0100
+
+clonezilla (3.27.16-3) unstable; urgency=medium
+
+  * changed the dependency on drbl to enforce a minimal version
+  * upgrades: Standards-Version: 4.1.4; debhelper (>= 10)
+  * added Vcs stuff for salsa.d.o
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 20 May 2018 16:37:38 +0200
+
+clonezilla (3.27.16-2) unstable; urgency=medium
+
+  * added a dependency on e2fsprogs. Closes: #887190
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 14 Jan 2018 21:17:04 +0100
+
+clonezilla (3.27.16-1) unstable; urgency=medium
+
+  * New upstream release
+  * updated d/watch
+  * added a dependency on fdisk. Closes: #872106
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 14 Aug 2017 16:28:07 +0200
+
+clonezilla (3.21.13-2) unstable; urgency=medium
+
+  * added a dependency on dialog (thx Dirk Krause!)
+  * added also suggestions for udpcast and sshfs
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 01 Feb 2017 11:30:28 +0100
+
+clonezilla (3.21.13-1) unstable; urgency=medium
+
+  * New upstream release
+  * Updated Standards-Version: 3.9.7
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 05 Jun 2016 17:42:47 +0200
+
+clonezilla (3.20.21-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 22 May 2016 17:42:47 +0200
+
+clonezilla (3.10.11-4) unstable; urgency=medium
+
+  * added a dependency on bc. Closes: #805025
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 14 Nov 2015 11:52:37 +0100
+
+clonezilla (3.10.11-3) unstable; urgency=medium
+
+  * modified the postrm script. Closes: #799579
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 30 Sep 2015 10:43:42 +0200
+
+clonezilla (3.10.11-2) unstable; urgency=medium
+
+  * created a symlink /opt/drbl => /usr/share/drbl; and another
+    /opt/drbl/conf/drbl.conf => /etc/drbl/drbl.conf; added a dependency on
+    gdisk; Closes: #770498.
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 06 Dec 2014 15:38:06 +0100
+
+clonezilla (3.10.11-1) unstable; urgency=medium
+
+  * upgraded to the newest version
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 07 Jun 2014 19:04:39 +0200
+
+clonezilla (3.9.47-1) unstable; urgency=medium
+
+  * upgraded to the newest version
+  * upgraded Standards-Version to 3.9.5 and debhelper to 9
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 18 May 2014 19:48:25 +0200
+
+clonezilla (3.5.2-2) unstable; urgency=low
+
+  * modified Depends:, Recommends:, and Suggests: clauses, thanks to
+    Shane Wegner. Closes: #723023
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 15 Sep 2013 18:58:18 +0200
+
+clonezilla (3.5.2-1) unstable; urgency=low
+
+  * Upgraded to the newest version
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 26 Aug 2013 20:43:57 +0200
+
+clonezilla (3.4.9-1) unstable; urgency=low
+
+  * Uprgaded to the newest upstream version
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 24 Jun 2013 10:46:02 +0200
+
+clonezilla (3.3.10-1) unstable; urgency=low
+
+  * Initial release (Closes: #708171)
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 13 May 2013 19:39:26 +0200

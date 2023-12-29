@@ -1,0 +1,324 @@
+#!/bin/bash
+# License: GPL 
+# Author: Steven Shiau <steven _at_ clonezilla org>
+# Description: Program to restore an image by receiving multicast packets from server
+# What will be done in this program:
+# 1. Get a tarball about the image which contains all files in the image except file system image files.
+# 3. Get a script about the full command to start restoring.
+#
+DRBL_SCRIPT_PATH="${DRBL_SCRIPT_PATH:-/usr/share/drbl}"
+. $DRBL_SCRIPT_PATH/sbin/drbl-conf-functions
+. /etc/drbl/drbl-ocs.conf
+. $DRBL_SCRIPT_PATH/sbin/ocs-functions
+
+# Load the config in ocs-live.conf. This is specially for Clonezilla live. It will overwrite some settings of /etc/drbl/drbl-ocs.conf, such as $DIA...
+[ -e "/etc/ocs/ocs-live.conf" ] && . /etc/ocs/ocs-live.conf
+#
+check_ocs_live="yes"
+
+# Functions
+USAGE() {
+    echo "$ocs - To start restoring an image from multicast/BT server by Clonezilla"
+    echo "Usage:"
+    echo "To run $ocs:"
+    echo "$ocs [OPTION] [SERVER]"
+    echo "This program is specially used in Clonezilla live to start restoring an image with multicast/BT packets in clients."
+    echo "SERVER is the multicast/BT server IP address or FQDN, e.g. 192.168.25.111..."
+    echo "If no SERVER is specified, a dialog menu will be shown."
+    echo 
+    echo "OPTION:"
+    echo "-b, --batch-mode   Run in batch mode."
+    echo "-icol, --ignore-check-ocs-live   Skip checking if the working environment is Clonezilla live or not."
+    echo "-d, --dest-dev DEV Assign the destination device to be restored. If not assigned, use the one assigned from server." 
+    echo "-v, --verbose      Prints verbose information."
+    echo 
+    echo "Ex:"
+    echo "To start restoring an image in client machine from multicast feeding server 192.168.25.111, run"
+    echo "   $ocs 192.168.25.111"
+    echo
+} # end of USAGE
+#
+task_run_restoring() {
+  local new_img_flag
+  network_config_if_necessary
+  # No need for this. We have a tarball solution.
+  #if ! mountpoint $ocsroot >/dev/null 2>&1; then 
+  #  ocs-prep-repo
+  #fi
+  
+  if [ "$cast_srv" = "ask_user" ]; then
+    # Ask about multicast feeding server
+    TMP="$(mktemp /tmp/ocs-cast-srv.XXXXXX)"
+    trap "[ -f "$TMP" ] && rm -f $TMP" HUP INT QUIT TERM EXIT
+    srv_default="$(LC_ALL=C route -n | grep "^0.0.0.0" | awk -F" " '{print $2}')"
+    ask_="true"
+    while [ "$ask_" = "true" ]; do
+      $DIA --backtitle "$msg_nchc_free_software_labs" --title  \
+      "Multicast server" --inputbox "$msg_ip_address_or_FQDN_of_server: Multicast server" \
+      0 0 $srv_default $DIA_ESC \
+      2> $TMP
+      cast_srv="$(cat $TMP)"
+      if [ -z "$cast_srv" ]; then
+        $DIA --backtitle "$msg_nchc_free_software_labs" --title "$msg_nchc_clonezilla" \
+        --yesno "$msg_you_must_input_a_server\n$msg_do_u_want_to_do_it_again" 0 0
+        ans_="$?"
+        case "$ans_" in
+          0) # yes is chosen
+             ask_="true";;
+          1) # no is chosen
+             echo "$msg_program_stop!" | tee -a ${OCS_LOGFILE}
+             [ -f "$TMP" ] && rm -f $TMP
+             exit 1;;
+        esac
+      else
+        # Got the one we want
+        ask_="false"
+      fi
+    done
+    [ -f "$TMP" ] && rm -f $TMP
+  fi
+  if [ -z "$cast_srv" ]; then
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "No Clonezilla live lite server was assigned or found!" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop!" | tee -a ${OCS_LOGFILE}
+    exit 1
+  fi
+  echo "Multicast server is: $cast_srv" | tee -a ${OCS_LOGFILE}
+  # Get info from server then restoring
+  # Part 1: get config file
+  rm -f /tmp/ocs-client-run.conf
+  get_run_conf="wget -P /tmp/ http://$cast_srv/ocs-client-run.conf"
+  echo "Running: $get_run_conf"
+  eval $get_run_conf | tee -a ${OCS_LOGFILE}
+  if [ -e "/tmp/ocs-client-run.conf" ]; then
+    echo "The content of /tmp/ocs-client-run.conf:" >> ${OCS_LOGFILE}
+    echo $msg_delimiter_star_line >> ${OCS_LOGFILE}
+    cat /tmp/ocs-client-run.conf >> ${OCS_LOGFILE}
+    echo $msg_delimiter_star_line >> ${OCS_LOGFILE}
+  else
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "$msg_failed_to_get_file_from_this_URL: http://$cast_srv/ocs-client-run.conf" | tee -a ${OCS_LOGFILE}
+    echo "$msg_program_stop." | tee -a ${OCS_LOGFILE}
+    [ "$save_restore_error_log" = "yes" ] && copy_error_log
+  fi
+  # get pseudo_img and ocs_sr_opt
+  pseudo_img=""
+  img_prefix=""
+  ocs_sr_opt=""
+  ocs_restore_dev=""
+  . /tmp/ocs-client-run.conf # Get the above variables.
+  # /tmp/ocs-client-run.conf contents example,
+  # BT:
+  # pseudo_img="img-wo-fs.tar.xz"
+  # img_prefix="raw-psdo-20230718-031037"
+  # ocs_sr_opt="--ocsroot /tmp/ -l en_US.UTF-8 --batch  -g auto -e1 auto -e2 -r --clone-hidden-data -k0 -p true -scr bt_restoredisk"
+  # ocs_restore_dev="nvme0n1"
+  #
+  # Multicast: 
+  # pseudo_img="img-wo-fs.tar.xz"
+  # img_prefix="raw-psdo-20230718-011414"
+  # ocs_sr_opt="--ocsroot /tmp/ -l en_US.UTF-8 --batch  -g auto -e1 auto -e2 -r --clone-hidden-data -k0 -p true -scr --mcast-port 2232 multicast_restoredisk"
+  # ocs_restore_dev="nvme0n1"
+
+  if [ -z "$pseudo_img" ]; then
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "No pseudo_img was assigned in /tmp/ocs-client-run.conf!" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop" | tee -a ${OCS_LOGFILE}
+    exit 1
+  fi
+  if [ -z "$ocs_sr_opt" ]; then
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "No ocs_sr_opt was assigned in /tmp/ocs-client-run.conf!" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop" | tee -a ${OCS_LOGFILE}
+    exit 1
+  fi
+  [ -z "$img_prefix" ] && img_prefix="ocs-img"
+
+  # Part 2: get pseudo image file
+  echo "Preparing the image info..." | tee -a ${OCS_LOGFILE}
+  rm -f /tmp/$pseudo_img | tee -a ${OCS_LOGFILE}
+  wget -P /tmp/ http://$cast_srv/$pseudo_img | tee -a ${OCS_LOGFILE}
+  if [ ! -e /tmp/$pseudo_img ]; then
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "Failed to retreive $pseudo_img from http://$cast_srv/." | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop" | tee -a ${OCS_LOGFILE}
+    exit 1
+  fi
+  new_img_flag="no"
+  if [ -d "/tmp/${img_prefix}" ]; then
+    # If the image already exists in /tmp, create a random dir.
+    image_abs_path="$(mktemp -d /tmp/${img_prefix}.XXXXXX)"
+    new_img_flag="yes"
+  else
+    image_abs_path="/tmp/${img_prefix}"
+    mkdir -p $image_abs_path
+  fi
+  ocs_restore_img="$(basename $image_abs_path)"
+  tar -xJf /tmp/$pseudo_img -C $image_abs_path | tee -a ${OCS_LOGFILE}
+  # The content of img-wo-fs.tar.xz is like (It contains the dir "btzone" for BT from raw device. However, it does not contain the dir "btzone" for multicast):
+  # root@lite-client:/tmp# tar tvJf img-wo-fs.tar.xz
+  # -rw-r--r-- 00-pseudo-img-note.txt
+  # -rw-r--r-- blkdev.list
+  # -rw-r--r-- blkid.list
+  # drwxr-xr-x btzone/
+  # drwxr-xr-x btzone/raw-psdo-20230720-104231/
+  # -rw------- btzone/raw-psdo-20230720-104231/nvme0n1p2.torrent
+  # -rw------- btzone/raw-psdo-20230720-104231/nvme0n1p1.torrent
+  # -rw------- btzone/raw-psdo-20230720-104231/cl-root.torrent
+  # -rw-r--r-- clonezilla-img
+  # -rw-r--r-- dev-fs.list
+  # -rw-r--r-- disk
+  # -rw-r--r-- dmraid.table
+  # -rw-r--r-- efi-nvram.dat
+  # -rw-r--r-- Info-dmi.txt
+  # -rw-r--r-- Info-img-id.txt
+  # -rw-r--r-- Info-img-size.txt
+  # -rw-r--r-- Info-lshw.txt
+  # -rw-r--r-- Info-lspci.txt
+  # -rw-r--r-- Info-OS-prober.txt
+  # -rw-r--r-- Info-packages.txt
+  # -rw-r--r-- Info-saved-by-cmd.txt
+  # -rw-r--r-- Info-smart.txt
+  # -rw------- lvm_cl.conf
+  # -rw-r--r-- lvm_logv.list
+  # -rw-r--r-- lvm_vg_dev.list
+  # -rw-r--r-- nvme0n1-chs.sf
+  # -rw-r--r-- nvme0n1-gpt-1st
+  # -rw-r--r-- nvme0n1-gpt-2nd
+  # -rw-r--r-- nvme0n1-gpt.gdisk
+  # -rw-r--r-- nvme0n1-gpt.sgdisk
+  # -rw-r--r-- nvme0n1-mbr
+  # -rw-r--r-- nvme0n1-pt.parted
+  # -rw-r--r-- nvme0n1-pt.parted.compact
+  # -rw-r--r-- nvme0n1-pt.sf
+  # -rw-r--r-- parts
+  # -rw-r--r-- swappt-cl-swap.info
+  if [ "$new_img_flag" = "yes" ]; then
+     # We have to do the corresponding change for the new image name under btzone/
+     if [ -e "$image_abs_path/btzone/${img_prefix}" ]; then
+       mv -v $image_abs_path/btzone/${img_prefix} $image_abs_path/btzone/$ocs_restore_img
+     fi
+  fi
+  if [ -d "$image_abs_path/btzone" ]; then
+    # Move the extracted image dir under "btzone" to new image repository "/tmp/btzone/"
+    mkdir -p /tmp/btzone/ | tee -a ${OCS_LOGFILE}
+    if [ -e "$image_abs_path/btzone/$ocs_restore_img" ]; then
+      mv -v $image_abs_path/btzone/$ocs_restore_img /tmp/btzone/ | tee -a ${OCS_LOGFILE}
+      rmdir $image_abs_path/btzone/
+    fi
+  fi
+  # Run restoring
+  # Before running, replace the new created image name
+  if [ -z "$ocs_restore_img" ]; then
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "No image was assigned." | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop!"
+    my_ocs_exit 1
+  fi
+  if [ -n "$dest_dev" ]; then
+    # If it's assigned at runtime, use it. Otherwise use the one assigned from server.
+    ocs_restore_dev="$dest_dev"
+  fi
+  if [ -n "$(ls -A $image_abs_path 2>/dev/null)" ]; then
+    ocs_run_cmd="ocs-sr -os $cast_srv $ocs_sr_opt $ocs_restore_img $ocs_restore_dev"
+    echo "Starting restoring by:" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_WARNING
+    echo "$ocs_run_cmd" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    eval $ocs_run_cmd
+  else
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_FAILURE
+    echo "Failed to find the correct pseudo image dir $image_abs_path" | tee -a ${OCS_LOGFILE}
+    [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+    echo "$msg_program_stop" | tee -a ${OCS_LOGFILE}
+    exit 1
+  fi
+} # end of task_run_restoring
+
+####################
+### Main program ###
+####################
+
+ocs_file="$0"
+ocs=`basename $ocs_file`
+OCS_LOGFILE="/var/log/${ocs}.log"
+#
+while [ $# -gt 0 ]; do
+ case "$1" in
+   -b|--batch) ocs_batch_mode="on"; shift;;
+   -icol|--ignore-check-ocs-live) check_ocs_live="no"; shift;;
+   -d|--dest-dev) 
+           # overwrite the ocsroot in drbl.conf
+           shift; 
+           if [ -z "$(echo $1 |grep ^-.)" ]; then
+             # skip the -xx option, in case 
+             dest_dev="$1"
+             shift;
+           fi
+           [ -z "$dest_dev" ] && USAGE && exit 1
+           ;;
+   -v|--verbose)
+           verbose="on"
+	   shift;;
+   -*)     echo "${0}: ${1}: invalid option" >&2
+           USAGE >& 2
+           exit 2 ;;
+   *)      break ;;
+ esac
+done
+
+cast_srv="$1"
+[ -z "$cast_srv" ] && cast_srv="ask_user"
+#
+check_if_root
+if [ "$check_ocs_live" = "yes" ]; then
+  check_if_in_clonezilla_live
+fi
+ask_and_load_lang_set
+
+# check DIA
+check_DIA_set_ESC $DIA
+
+# Format the dest_dev as sda instead of /dev/sda.
+dest_dev="$(strip_leading_dev $dest_dev)" # No matter the input is like /dev/sda or sda, format it as sda
+
+mkdir -p $ocs_log_dir
+ocs_log_rotate $OCS_LOGFILE
+
+# Check if run on clonezilla live lite server
+if [ -e "/var/www/html/img-wo-fs.tar.xz" -a -e "/var/www/html/ocs-client-run.conf" ]; then
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_WARNING
+  echo "$msg_client_program_is_run_on_lite_server" | tee -a ${OCS_LOGFILE}
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+  echo -n "$msg_are_u_sure_u_want_to_continue (y/N) " | tee -a ${OCS_LOGFILE}
+  read continue_confirm_ans
+  case "$continue_confirm_ans" in
+       y|Y|[yY][eE][sS])
+          echo "$msg_let_me_ask_you_again."
+          echo -n "$msg_are_u_sure_u_want_to_continue (y/N) " | tee -a ${OCS_LOGFILE}
+          read confirm_ans_again
+          case "$confirm_ans_again" in
+          y|Y|[yY][eE][sS])
+             echo "$msg_ok_let_do_it" | tee -a ${OCS_LOGFILE}
+	     ;;
+          *)
+             echo "$msg_program_stop." | tee -a ${OCS_LOGFILE}
+             copy_error_log
+             exit 1
+          esac
+             ;;
+       *)
+          echo "$msg_program_stop." | tee -a ${OCS_LOGFILE}
+          # Saving mode, always copy error log to image dir.
+          copy_error_log
+          exit 1
+  esac
+fi
+
+#
+task_run_restoring
